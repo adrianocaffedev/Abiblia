@@ -131,8 +131,8 @@ export const Cover: React.FC<CoverProps> = ({ imageSrc, onOpen }) => {
                   Bíblia Sagrada
                 </h1>
                 <p className="text-stone-400 text-sm xs:text-base md:text-lg font-light max-w-md mx-auto md:mx-0 leading-relaxed italic">
-                  "Lâmpada para os meus pés é a tua palavra e luz para o meu caminho."<br/>
-                  <span className="not-italic mt-3 block opacity-90">Mergulhe na sabedoria eterna e encontre paz para a sua alma através das Escrituras Sagradas.</span>
+                  "Porque a palavra de Deus é viva e eficaz, e mais penetrante do que espada alguma de dois gumes."<br/>
+                  <span className="not-italic mt-3 block opacity-90">Conecte-se com o divino através das Escrituras. Permita que a sabedoria eterna ilumine seus passos e renove sua esperança.</span>
                 </p>
             </div>
 
