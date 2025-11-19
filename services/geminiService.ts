@@ -2,19 +2,20 @@
 import { GoogleGenAI, Type, Modality, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Verse } from '../types';
 
-// Garante acesso seguro ao process.env mesmo no navegador
+// Acesso direto simplificado para permitir que o bundler do Vercel faça a substituição da string
 const getApiKey = () => {
-  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+  try {
     return process.env.API_KEY;
+  } catch (e) {
+    return undefined;
   }
-  // Fallback seguro para evitar crash, mas retornará erro na chamada
-  return '';
 };
 
 const getAI = () => {
     const key = getApiKey();
-    if (!key) {
-        console.error("API Key is missing in environment variables");
+    // Verifica se a chave é uma string válida e não vazia
+    if (!key || typeof key !== 'string' || key.trim() === '') {
+        console.warn("API Key não encontrada ou vazia.");
         return null;
     }
     return new GoogleGenAI({ apiKey: key });
@@ -36,7 +37,7 @@ const cleanJsonResponse = (text: string) => {
 
 export const fetchChapterContent = async (bookName: string, chapterNumber: number, retryCount = 0): Promise<{ verses: Verse[], summary: string }> => {
   const ai = getAI();
-  if (!ai) throw new Error("Chave de API não configurada. Verifique suas variáveis de ambiente.");
+  if (!ai) throw new Error("MISSING_API_KEY");
 
   try {
     const response = await ai.models.generateContent({
@@ -110,7 +111,7 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
 
 export const askBibleAssistant = async (query: string, context: string): Promise<string> => {
   const ai = getAI();
-  if (!ai) return "Erro: API Key ausente.";
+  if (!ai) return "Por favor, configure sua API Key para usar o assistente.";
 
   try {
     const response = await ai.models.generateContent({

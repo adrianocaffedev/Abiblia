@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
   <head>
@@ -7,8 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script>
-      // Polyfill para evitar crash de 'process is not defined' no navegador
-      window.process = window.process || { env: { API_KEY: '' } };
+      // Polyfill seguro: Cria o objeto process apenas se não existir, sem sobrescrever env
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
       
       tailwind.config = {
         theme: {

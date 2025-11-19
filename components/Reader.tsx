@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { BibleState, Verse } from '../types';
 import { AVAILABLE_VOICES } from '../constants';
-import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Square, Volume2, Mic2, ChevronDown } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Square, Volume2, Mic2, ChevronDown, AlertTriangle } from 'lucide-react';
 import { getVerseAudio } from '../services/geminiService';
 
 interface ReaderProps {
@@ -259,14 +259,37 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
   }
 
   if (state.error) {
+    const isApiKeyError = state.error.includes('MISSING_API_KEY') || state.error.includes('API Key') || state.error.includes('configurada');
+
     return (
       <div className="flex-1 flex items-center justify-center bg-bible-paper p-8 text-center">
-        <div className="max-w-md">
-          <p className="text-red-600 font-semibold mb-2">Ocorreu um erro</p>
-          <p className="text-stone-600 mb-4">{state.error}</p>
+        <div className="max-w-md bg-white p-6 rounded-lg shadow-lg border border-stone-200">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-stone-800 mb-2">Atenção Necessária</h3>
+          
+          {isApiKeyError ? (
+            <div className="text-left space-y-3 text-sm text-stone-600 mb-6">
+                <p className="font-medium text-red-600 text-center">Chave de API não configurada.</p>
+                <p>Para que o app funcione no Vercel, você precisa configurar a variável de ambiente:</p>
+                <ol className="list-decimal list-inside space-y-1 bg-stone-50 p-3 rounded">
+                    <li>Vá ao painel do seu projeto no <strong>Vercel</strong>.</li>
+                    <li>Clique em <strong>Settings</strong> {'>'} <strong>Environment Variables</strong>.</li>
+                    <li>Adicione uma nova chave:
+                        <ul className="list-disc list-inside ml-4 mt-1 font-mono text-xs">
+                            <li>Key: <strong>API_KEY</strong></li>
+                            <li>Value: <em>Sua chave do Google AI Studio</em></li>
+                        </ul>
+                    </li>
+                    <li>Redeploy (reimplante) o projeto para aplicar.</li>
+                </ol>
+            </div>
+          ) : (
+            <p className="text-stone-600 mb-4">{state.error}</p>
+          )}
+          
           <button 
             onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-bible-leather text-white rounded hover:bg-stone-800"
+            className="px-6 py-2 bg-bible-leather text-white rounded hover:bg-stone-800 transition-colors"
           >
             Tentar Novamente
           </button>
