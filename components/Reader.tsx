@@ -303,7 +303,10 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
   return (
     <div className="flex-1 bg-bible-paper relative h-full overflow-hidden flex flex-col">
       {/* Top Bar inside Reader */}
-      <div className="sticky top-0 z-10 bg-bible-paper/95 backdrop-blur border-b border-stone-200 p-3 md:p-4 flex justify-between items-center shadow-sm gap-2">
+      <div className="sticky top-0 z-10 bg-bible-paper/95 backdrop-blur border-b border-stone-200 p-2 md:p-4 flex justify-between items-center shadow-sm gap-2">
+         {/* Left side spacer for menu button on mobile */}
+         <div className="w-8 lg:hidden"></div>
+         
          <div className="flex items-baseline gap-2 overflow-hidden flex-1">
             <h2 className="text-lg md:text-2xl font-bold font-serif text-bible-ink truncate">
                 {state.currentBook.name}
@@ -311,7 +314,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             <span className="text-bible-gold text-xl md:text-3xl font-serif">{state.currentChapter}</span>
          </div>
          
-         <div className="flex items-center gap-2 md:gap-3">
+         <div className="flex items-center gap-1 md:gap-3">
             
             {/* Voice Selector */}
             <div className="relative hidden md:block">
@@ -352,7 +355,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             {/* Audio Control */}
             <button 
                 onClick={togglePlayChapter}
-                className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-full transition-all border ${
+                className={`flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm rounded-full transition-all border ${
                     isPlaying && !activeVerseNum 
                     ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
                     : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
@@ -360,22 +363,22 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                 title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo"}
             >
                 {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                <span className="hidden sm:inline font-medium">{isPlaying ? "Parar Leitura" : "Ouvir Capítulo"}</span>
+                <span className="hidden sm:inline font-medium">{isPlaying ? "Parar" : "Ouvir"}</span>
             </button>
 
             {/* AI Button */}
             <button 
                 onClick={onToggleAI}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200"
+                className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200"
             >
                 <MessageCircleQuestion className="w-4 h-4" />
-                <span className="hidden sm:inline">Estudo AI</span>
+                <span className="hidden sm:inline">AI</span>
             </button>
          </div>
       </div>
 
       {/* Content Scroll Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 md:p-12 max-w-4xl mx-auto w-full pb-32">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-12 max-w-4xl mx-auto w-full pb-32">
         
         {/* Mobile Voice Selector (Visible only on mobile) */}
         <div className="md:hidden mb-6">
@@ -399,7 +402,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
         {/* AI Summary Banner */}
         {state.content.summary && (
-            <div className="mb-8 p-6 bg-stone-100 rounded-xl border-l-4 border-bible-gold italic text-stone-600 font-serif text-sm leading-relaxed">
+            <div className="mb-6 md:mb-8 p-4 md:p-6 bg-stone-100 rounded-xl border-l-4 border-bible-gold italic text-stone-600 font-serif text-sm leading-relaxed">
                 <span className="block font-bold text-bible-gold mb-1 not-italic text-xs uppercase tracking-widest">Resumo do Capítulo</span>
                 {state.content.summary}
             </div>
@@ -413,11 +416,11 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                     key={verse.number} 
                     className={`relative group rounded-lg transition-all duration-500 ${
                         activeVerseNum === verse.number 
-                        ? 'bg-bible-gold/15 py-4 px-4 -mx-4 shadow-sm ring-1 ring-bible-gold/20' 
+                        ? 'bg-bible-gold/15 py-4 px-3 -mx-3 md:px-4 md:-mx-4 shadow-sm ring-1 ring-bible-gold/20' 
                         : 'hover:bg-stone-50 py-1'
                     }`}
                 >
-                    <p className="text-lg md:text-xl leading-loose font-serif text-bible-ink relative">
+                    <p className="text-lg md:text-xl leading-loose font-serif text-bible-ink relative text-justify md:text-left">
                         {/* Verse Number */}
                         <sup className={`text-xs font-bold mr-2 select-none font-sans transition-colors ${
                             activeVerseNum === verse.number ? 'text-bible-leather' : 'text-bible-gold'
@@ -448,24 +451,24 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
         </div>
 
         {/* Navigation Footer */}
-        <div className="mt-16 pt-8 border-t border-stone-200 flex justify-between items-center">
+        <div className="mt-12 pt-6 border-t border-stone-200 flex justify-between items-center pb-8">
             <button 
                 onClick={() => onChapterChange(-1)}
                 disabled={state.currentBook.name === 'Gênesis' && state.currentChapter === 1}
-                className="flex items-center gap-2 text-stone-500 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group"
+                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group flex-1 md:flex-none justify-center md:justify-start mr-2"
             >
                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
                 <span className="font-sans font-medium">Anterior</span>
             </button>
 
-            <span className="text-stone-400 text-sm font-sans">
+            <span className="text-stone-400 text-xs font-sans hidden md:block">
                 {state.currentBook.name} {state.currentChapter}
             </span>
 
             <button 
                 onClick={() => onChapterChange(1)}
                 disabled={state.currentBook.name === 'Apocalipse' && state.currentChapter === 22}
-                className="flex items-center gap-2 text-stone-500 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group"
+                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group flex-1 md:flex-none justify-center md:justify-end ml-2"
             >
                 <span className="font-sans font-medium">Próximo</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

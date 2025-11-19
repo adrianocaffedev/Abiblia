@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Book, Testament } from '../types';
 import { BIBLE_BOOKS } from '../constants';
@@ -46,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-80 bg-white border-r border-stone-200 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 lg:w-72 flex flex-col shadow-2xl lg:shadow-none`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-[85vw] max-w-sm bg-white border-r border-stone-200 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0 lg:w-72 flex flex-col shadow-2xl lg:shadow-none`}>
       
       {/* Header */}
       <div className="relative cursor-pointer" onClick={onBackToCover} title="Voltar para capa">
@@ -65,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <span>Bíblia Sagrada</span>
           </div>
-          <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="lg:hidden p-1 hover:bg-stone-200 rounded">
+          <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="lg:hidden p-2 hover:bg-stone-200 rounded-full -mr-2">
             <X className="w-6 h-6 text-stone-500" />
           </button>
         </div>
@@ -80,7 +81,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             placeholder="Buscar livro..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-stone-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-bible-gold outline-none placeholder-stone-400"
+            className="w-full pl-9 pr-4 py-3 bg-stone-100 border-none rounded-lg text-sm focus:ring-2 focus:ring-bible-gold outline-none placeholder-stone-400"
           />
         </div>
       </div>
@@ -91,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <div key={testament}>
             <button 
               onClick={() => toggleTestament(testament)}
-              className="w-full px-4 py-3 flex items-center justify-between bg-stone-50 hover:bg-stone-100 border-b border-stone-100 transition-colors"
+              className="w-full px-4 py-4 flex items-center justify-between bg-stone-50 hover:bg-stone-100 border-b border-stone-100 transition-colors"
             >
               <span className="font-semibold text-stone-700 text-sm uppercase tracking-wider">{testament}</span>
               {expandedTestament === testament ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -102,11 +103,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {groupedBooks[testament].map((book) => (
                   <div key={book.name} className="border-b border-stone-50 last:border-0">
                     <details className="group">
-                      <summary className={`px-6 py-2 cursor-pointer list-none hover:bg-stone-50 flex justify-between items-center ${currentBook.name === book.name ? 'text-bible-gold font-semibold' : 'text-stone-600'}`}>
+                      <summary className={`px-6 py-3 cursor-pointer list-none hover:bg-stone-50 flex justify-between items-center ${currentBook.name === book.name ? 'text-bible-gold font-semibold' : 'text-stone-600'}`}>
                         <span>{book.name}</span>
                         <span className="text-xs text-stone-400">{book.chapters}</span>
                       </summary>
-                      <div className="px-6 py-2 grid grid-cols-5 gap-2 bg-stone-50">
+                      <div className="px-6 py-3 grid grid-cols-5 gap-3 bg-stone-50">
                         {Array.from({ length: book.chapters }, (_, i) => i + 1).map((chapter) => (
                           <button
                             key={chapter}
@@ -114,7 +115,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               onSelect(book, chapter);
                               if (window.innerWidth < 1024) onClose();
                             }}
-                            className={`aspect-square flex items-center justify-center text-sm rounded hover:bg-bible-gold hover:text-white transition-colors ${
+                            className={`aspect-square flex items-center justify-center text-sm rounded hover:bg-bible-gold hover:text-white transition-colors p-2 ${
                               currentBook.name === book.name && currentChapter === chapter
                                 ? 'bg-bible-gold text-white shadow-md'
                                 : 'bg-white text-stone-600 border border-stone-200'
@@ -137,14 +138,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="p-4 border-t border-stone-200 bg-stone-50 space-y-2">
          <button 
             onClick={onBackToCover}
-            className="flex items-center gap-2 text-stone-600 hover:text-bible-leather transition-colors text-sm font-medium w-full px-2 py-2 rounded hover:bg-stone-100"
+            className="flex items-center gap-2 text-stone-600 hover:text-bible-leather transition-colors text-sm font-medium w-full px-2 py-3 rounded hover:bg-stone-100"
         >
             <Home className="w-4 h-4" />
             <span>Fechar Livro (Ir para Capa)</span>
         </button>
         <button 
             onClick={onOpenSettings}
-            className="flex items-center gap-2 text-stone-600 hover:text-bible-leather transition-colors text-sm font-medium w-full px-2 py-2 rounded hover:bg-stone-100"
+            className="flex items-center gap-2 text-stone-600 hover:text-bible-leather transition-colors text-sm font-medium w-full px-2 py-3 rounded hover:bg-stone-100"
         >
             <Settings className="w-4 h-4" />
             <span>Configurações da Capa</span>
