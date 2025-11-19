@@ -7,6 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script>
+      // Polyfill para evitar crash de 'process is not defined' no navegador
+      window.process = window.process || { env: { API_KEY: '' } };
+      
       tailwind.config = {
         theme: {
           extend: {
@@ -53,5 +56,6 @@
 </head>
   <body class="bg-stone-100 text-stone-900 h-full">
     <div id="root" class="h-full"></div>
+    <script type="module" src="./index.tsx"></script>
   </body>
 </html>

@@ -2,14 +2,22 @@
 import { GoogleGenAI, Type, Modality, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Verse } from '../types';
 
-const apiKey = process.env.API_KEY || '';
-// Helper to avoid crashing if no key (will show error in UI)
+// Garante acesso seguro ao process.env mesmo no navegador
+const getApiKey = () => {
+  if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+  // Fallback seguro para evitar crash, mas retornará erro na chamada
+  return '';
+};
+
 const getAI = () => {
-    if (!apiKey) {
-        console.error("API Key is missing");
+    const key = getApiKey();
+    if (!key) {
+        console.error("API Key is missing in environment variables");
         return null;
     }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: key });
 };
 
 // Função auxiliar robusta para extrair JSON vindo de LLMs
@@ -28,10 +36,9 @@ const cleanJsonResponse = (text: string) => {
 
 export const fetchChapterContent = async (bookName: string, chapterNumber: number, retryCount = 0): Promise<{ verses: Verse[], summary: string }> => {
   const ai = getAI();
-  if (!ai) throw new Error("Chave de API não configurada.");
+  if (!ai) throw new Error("Chave de API não configurada. Verifique suas variáveis de ambiente.");
 
   try {
-    // Removido responseSchema estrito para evitar erro 500 em textos longos
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `Livro: ${bookName}, Capítulo: ${chapterNumber}.
@@ -47,7 +54,7 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
         "summary": "Resumo teológico breve do capítulo."
       }`,
       config: {
-        temperature: 0.1, // Mais determinístico para evitar erros de estrutura
+        temperature: 0.1,
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -62,7 +69,6 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
         const cleanedText = cleanJsonResponse(response.text);
         const data = JSON.parse(cleanedText);
         
-        // Validação básica
         if (!data.verses || !Array.isArray(data.verses) || data.verses.length === 0) {
             throw new Error("Estrutura de versículos inválida ou vazia.");
         }
@@ -70,7 +76,6 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
         return data;
       } catch (parseError) {
         console.error("Erro ao fazer parse do JSON:", parseError);
-        // Se falhar no parse, tentamos novamente se ainda tivermos tentativas
         if (retryCount < 2) {
              console.log(`Erro de parse. Retentando... (${retryCount + 1}/3)`);
              return fetchChapterContent(bookName, chapterNumber, retryCount + 1);
@@ -79,7 +84,6 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
       }
     }
     
-    // Se response.text vier vazio (bloqueio ou falha)
     if (retryCount < 2) {
         console.warn(`Resposta vazia. Retentando... (${retryCount + 1}/3)`);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -91,7 +95,6 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
   } catch (error: any) {
     console.error(`Erro detalhado ao buscar capítulo (Tentativa ${retryCount + 1}):`, error);
     
-    // Lógica de Retry para erros 500 ou 503
     if (retryCount < 3 && (error.message?.includes('500') || error.message?.includes('503') || error.message?.includes('Internal'))) {
         const delay = (retryCount + 1) * 1500;
         await new Promise(resolve => setTimeout(resolve, delay));
