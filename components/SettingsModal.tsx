@@ -114,9 +114,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, c
                 <div className="relative w-full aspect-[3/4] max-w-[280px] bg-stone-100 rounded-lg border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden shadow-inner">
                     {(generatedImage || currentCover) ? (
                         <img 
+                            key={generatedImage || currentCover}
                             src={generatedImage || currentCover || ''} 
                             alt="Capa" 
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover animate-fadeIn"
                         />
                     ) : (
                         <div className="text-center p-6 text-stone-400">

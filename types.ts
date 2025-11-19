@@ -1,3 +1,4 @@
+
 export enum Testament {
   OLD = 'Antigo Testamento',
   NEW = 'Novo Testamento'
@@ -30,4 +31,11 @@ export interface BibleState {
   error: string | null;
   isSidebarOpen: boolean;
   isAiPanelOpen: boolean;
+}
+
+export interface VoiceConfig {
+    id: string;
+    name: string;
+    gender: 'Masculino' | 'Feminino';
+    style: string;
 }

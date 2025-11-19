@@ -50,12 +50,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       
       {/* Header */}
       <div className="relative cursor-pointer" onClick={onBackToCover} title="Voltar para capa">
-        {coverImage && (
-          <div className="absolute inset-0 overflow-hidden">
-             <img src={coverImage} alt="" className="w-full h-full object-cover opacity-20 blur-[2px]" />
-             <div className="absolute inset-0 bg-gradient-to-b from-stone-900/10 to-white/90"></div>
-          </div>
-        )}
+        <div className={`absolute inset-0 overflow-hidden transition-opacity duration-700 ${coverImage ? 'opacity-100' : 'opacity-0'}`}>
+            {coverImage && (
+                <>
+                    <img key={coverImage} src={coverImage} alt="" className="w-full h-full object-cover opacity-20 blur-[2px] animate-fadeIn" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-stone-900/10 to-white/90"></div>
+                </>
+            )}
+        </div>
         <div className={`p-4 border-b border-stone-200 flex justify-between items-center relative z-10 ${coverImage ? 'bg-stone-900/5 text-stone-800' : 'bg-stone-50'}`}>
           <div className="flex items-center gap-2 font-bold text-xl font-serif text-bible-leather">
             <div className="w-8 h-8 rounded bg-bible-gold flex items-center justify-center text-white shadow-sm">

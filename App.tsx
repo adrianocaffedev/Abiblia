@@ -35,22 +35,39 @@ const App: React.FC = () => {
     
     try {
       const content = await fetchChapterContent(book.name, chapter);
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        content: {
-          book: book.name,
-          chapter: chapter,
-          verses: content.verses,
-          summary: content.summary
+      
+      setState(prev => {
+        // Prevenção de Race Condition:
+        // Verifica se o usuário ainda está no livro/capítulo que foi solicitado.
+        // Se ele mudou de página rapidamente enquanto carregava, ignoramos este resultado antigo.
+        if (prev.currentBook.name !== book.name || prev.currentChapter !== chapter) {
+            return prev;
         }
-      }));
+
+        return {
+            ...prev,
+            isLoading: false,
+            content: {
+            book: book.name,
+            chapter: chapter,
+            verses: content.verses,
+            summary: content.summary
+            }
+        };
+      });
     } catch (err) {
-      setState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: err instanceof Error ? err.message : "Erro desconhecido ao carregar capítulo."
-      }));
+      setState(prev => {
+        // Ignora erros de requisições que não são mais relevantes
+        if (prev.currentBook.name !== book.name || prev.currentChapter !== chapter) {
+            return prev;
+        }
+
+        return {
+            ...prev,
+            isLoading: false,
+            error: err instanceof Error ? err.message : "Erro desconhecido ao carregar capítulo."
+        };
+      });
     }
   }, []);
 

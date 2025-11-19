@@ -1,4 +1,13 @@
-import { Book, Testament } from './types';
+
+import { Book, Testament, VoiceConfig } from './types';
+
+export const AVAILABLE_VOICES: VoiceConfig[] = [
+    { id: 'Puck', name: 'Puck', gender: 'Masculino', style: 'Narrativo Padrão' },
+    { id: 'Charon', name: 'Charon', gender: 'Masculino', style: 'Profundo e Sério' },
+    { id: 'Kore', name: 'Kore', gender: 'Feminino', style: 'Suave e Calmo' },
+    { id: 'Fenrir', name: 'Fenrir', gender: 'Masculino', style: 'Intenso e Rápido' },
+    { id: 'Zephyr', name: 'Zephyr', gender: 'Feminino', style: 'Claro e Jornalístico' },
+];
 
 export const BIBLE_BOOKS: Book[] = [
   // --- ANTIGO TESTAMENTO ---
