@@ -25,7 +25,6 @@ async function decodePCM(
   for (let channel = 0; channel < numChannels; channel++) {
     const channelData = buffer.getChannelData(channel);
     for (let i = 0; i < frameCount; i++) {
-      // Normaliza de Int16 (-32768 a 32767) para Float32 (-1.0 a 1.0)
       channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
     }
   }
@@ -49,26 +48,22 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
   const versesRef = useRef<Verse[]>([]);
   
   // Smart Audio Queue / Cache
-  // Armazena promessas de áudio para evitar download duplicado e permitir prefetch
   const audioCacheRef = useRef<Map<number, Promise<AudioBuffer>>>(new Map());
 
-  // Scroll to top when chapter changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
     stopAudio();
-    audioCacheRef.current.clear(); // Limpa cache ao mudar capítulo
+    audioCacheRef.current.clear();
   }, [state.currentBook, state.currentChapter]);
 
-  // Update verses ref
   useEffect(() => {
     if (state.content?.verses) {
         versesRef.current = state.content.verses;
     }
   }, [state.content]);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       stopAudio();
@@ -78,14 +73,12 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     };
   }, []);
 
-  // Change Voice Handler
   const handleVoiceChange = (voice: typeof AVAILABLE_VOICES[0]) => {
       setSelectedVoice(voice);
       setShowVoiceMenu(false);
       if (isPlaying) {
           stopAudio();
-          audioCacheRef.current.clear(); // Limpa cache pois a voz mudou
-          // Opcional: Reiniciar leitura ou esperar usuário dar play
+          audioCacheRef.current.clear();
       } else {
           audioCacheRef.current.clear();
       }
@@ -111,10 +104,8 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     setIsPlaying(false);
     setActiveVerseNum(null);
     setLoadingAudio(false);
-    // Nota: Não limpamos o cache de áudio aqui para permitir retomar rapidamente se o usuário pausou
   };
 
-  // Busca e decodifica o áudio (com cache)
   const fetchAndDecodeAudio = (text: string, index: number): Promise<AudioBuffer> => {
     if (audioCacheRef.current.has(index)) {
         return audioCacheRef.current.get(index)!;
@@ -136,7 +127,6 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     return promise;
   };
 
-  // Toca um buffer
   const playAudioBuffer = (buffer: AudioBuffer, verseNumber: number, onComplete?: () => void) => {
       if (!isPlayingRef.current) return;
 
@@ -172,25 +162,21 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
       source.start(0);
   };
 
-  // "Smart Buffer" Logic
   const prefetchUpcoming = (currentIndex: number) => {
       const verses = versesRef.current;
-      // Olha 3 versículos à frente
       const LOOKAHEAD = 3;
       
       for (let i = 1; i <= LOOKAHEAD; i++) {
           const nextIndex = currentIndex + i;
           if (nextIndex < verses.length) {
-              // Dispara o fetch e armazena no cache map se não existir
               if (!audioCacheRef.current.has(nextIndex)) {
                   fetchAndDecodeAudio(verses[nextIndex].text, nextIndex)
-                    .catch(e => console.warn(`Background prefetch failed for verse ${verses[nextIndex].number}`, e));
+                    .catch(e => console.warn(`Background prefetch failed`, e));
               }
           }
       }
   };
 
-  // Loop de leitura principal
   const playChapter = useCallback(async (startIndex = 0) => {
     const verses = versesRef.current;
     if (!verses || startIndex >= verses.length) {
@@ -206,26 +192,19 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
     const currentVerse = verses[startIndex];
     
-    // Mostra loading apenas se não tivermos o audio em cache ainda
     if (!audioCacheRef.current.has(startIndex)) {
         setLoadingAudio(true);
     }
 
     try {
-        // 1. Dispara prefetch dos próximos IMEDIATAMENTE
         prefetchUpcoming(startIndex);
-
-        // 2. Obtém audio atual (do cache ou espera terminar de baixar)
         const audioBuffer = await fetchAndDecodeAudio(currentVerse.text, startIndex);
 
-        // Verificação de segurança
         if (!isPlayingRef.current) return;
         setLoadingAudio(false);
 
-        // 3. Toca
         playAudioBuffer(audioBuffer, currentVerse.number, () => {
             if (isPlayingRef.current) {
-                // Recursão para o próximo
                 playChapter(startIndex + 1);
             }
         });
@@ -233,13 +212,12 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     } catch (error) {
         console.error("Erro no fluxo de leitura:", error);
         if (isPlayingRef.current) {
-             // Retry simples: espera um pouco e tenta o próximo
              setTimeout(() => playChapter(startIndex + 1), 1000);
         } else {
             stopAudio();
         }
     }
-  }, [selectedVoice]); // Recria função se a voz mudar
+  }, [selectedVoice]);
 
   const togglePlayChapter = () => {
     if (isPlaying) {
@@ -267,7 +245,6 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
           setLoadingAudio(false);
           playAudioBuffer(buffer, verse.number);
       } catch (e) {
-          console.error(e);
           stopAudio();
       }
   };
@@ -276,7 +253,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-bible-paper">
         <Loader2 className="w-12 h-12 text-bible-gold animate-spin mb-4" />
-        <p className="text-stone-500 animate-pulse font-serif">Buscando as escrituras sagradas...</p>
+        <p className="text-stone-500 animate-pulse font-serif text-center px-4">Buscando as escrituras sagradas...</p>
       </div>
     );
   }
@@ -302,9 +279,9 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
   return (
     <div className="flex-1 bg-bible-paper relative h-full overflow-hidden flex flex-col">
-      {/* Top Bar inside Reader */}
+      {/* Top Bar */}
       <div className="sticky top-0 z-10 bg-bible-paper/95 backdrop-blur border-b border-stone-200 p-2 md:p-4 flex justify-between items-center shadow-sm gap-2">
-         {/* Left side spacer for menu button on mobile */}
+         {/* Spacer for menu button */}
          <div className="w-8 lg:hidden"></div>
          
          <div className="flex items-baseline gap-2 overflow-hidden flex-1">
@@ -314,9 +291,9 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             <span className="text-bible-gold text-xl md:text-3xl font-serif">{state.currentChapter}</span>
          </div>
          
-         <div className="flex items-center gap-1 md:gap-3">
+         <div className="flex items-center gap-2 md:gap-3">
             
-            {/* Voice Selector */}
+            {/* Voice Selector - Desktop */}
             <div className="relative hidden md:block">
                 <button 
                     onClick={() => setShowVoiceMenu(!showVoiceMenu)}
@@ -331,9 +308,6 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                     <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowVoiceMenu(false)}></div>
                     <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-stone-100 z-20 py-1 overflow-hidden">
-                        <div className="px-3 py-2 bg-stone-50 border-b border-stone-100">
-                            <p className="text-xs font-semibold text-stone-500 uppercase tracking-wider">Selecione a Voz</p>
-                        </div>
                         {AVAILABLE_VOICES.map(voice => (
                             <button
                                 key={voice.id}
@@ -344,7 +318,6 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                                     {voice.name} 
                                     <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500">{voice.gender}</span>
                                 </span>
-                                <span className="text-xs text-stone-400 mt-0.5">{voice.style}</span>
                             </button>
                         ))}
                     </div>
@@ -352,7 +325,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                 )}
             </div>
 
-            {/* Audio Control */}
+            {/* Audio Control - Compact on Mobile */}
             <button 
                 onClick={togglePlayChapter}
                 className={`flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm rounded-full transition-all border ${
@@ -363,16 +336,16 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                 title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo"}
             >
                 {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                <span className="hidden sm:inline font-medium">{isPlaying ? "Parar" : "Ouvir"}</span>
+                <span className="hidden md:inline font-medium">{isPlaying ? "Parar" : "Ouvir"}</span>
             </button>
 
-            {/* AI Button */}
+            {/* AI Button - Compact on Mobile */}
             <button 
                 onClick={onToggleAI}
                 className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200"
             >
                 <MessageCircleQuestion className="w-4 h-4" />
-                <span className="hidden sm:inline">AI</span>
+                <span className="hidden md:inline">AI</span>
             </button>
          </div>
       </div>
@@ -380,7 +353,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
       {/* Content Scroll Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-12 max-w-4xl mx-auto w-full pb-32">
         
-        {/* Mobile Voice Selector (Visible only on mobile) */}
+        {/* Mobile Voice Selector */}
         <div className="md:hidden mb-6">
             <label className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2 block">Voz da Narração</label>
             <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
@@ -394,7 +367,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                             : 'bg-white text-stone-600 border-stone-200'
                         }`}
                     >
-                        {voice.name} ({voice.gender.charAt(0)})
+                        {voice.name}
                     </button>
                 ))}
             </div>
@@ -421,17 +394,13 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                     }`}
                 >
                     <p className="text-lg md:text-xl leading-loose font-serif text-bible-ink relative text-justify md:text-left">
-                        {/* Verse Number */}
                         <sup className={`text-xs font-bold mr-2 select-none font-sans transition-colors ${
                             activeVerseNum === verse.number ? 'text-bible-leather' : 'text-bible-gold'
                         }`}>
                             {verse.number}
                         </sup>
-                        
-                        {/* Text */}
                         {verse.text}
 
-                        {/* Inline Play Button (Visible on Hover or Active) */}
                         <button
                             onClick={() => playSpecificVerse(verse, index)}
                             className={`absolute -left-8 top-1.5 p-1.5 rounded-full transition-opacity ${
@@ -455,10 +424,10 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             <button 
                 onClick={() => onChapterChange(-1)}
                 disabled={state.currentBook.name === 'Gênesis' && state.currentChapter === 1}
-                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group flex-1 md:flex-none justify-center md:justify-start mr-2"
+                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-1 md:flex-none justify-center md:justify-start mr-2"
             >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                <span className="font-sans font-medium">Anterior</span>
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-sans font-medium hidden xs:inline">Anterior</span>
             </button>
 
             <span className="text-stone-400 text-xs font-sans hidden md:block">
@@ -468,10 +437,10 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             <button 
                 onClick={() => onChapterChange(1)}
                 disabled={state.currentBook.name === 'Apocalipse' && state.currentChapter === 22}
-                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors group flex-1 md:flex-none justify-center md:justify-end ml-2"
+                className="flex items-center gap-2 px-4 py-3 bg-stone-50 rounded-lg text-stone-600 hover:bg-stone-100 hover:text-bible-leather disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex-1 md:flex-none justify-center md:justify-end ml-2"
             >
-                <span className="font-sans font-medium">Próximo</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                <span className="font-sans font-medium hidden xs:inline">Próximo</span>
+                <ArrowRight className="w-5 h-5" />
             </button>
         </div>
       </div>
