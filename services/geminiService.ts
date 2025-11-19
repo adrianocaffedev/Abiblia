@@ -1,42 +1,13 @@
 
-import { GoogleGenAI, Type, Modality, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, Modality, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 import { Verse } from '../types';
 
-// Acesso robusto para suportar diferentes ferramentas de build (Vite, CRA, Vercel)
-const getApiKey = () => {
-  try {
-    // Tenta encontrar a chave em diferentes padrões comuns de variáveis de ambiente
-    return process.env.API_KEY || 
-           process.env.REACT_APP_API_KEY || 
-           process.env.VITE_API_KEY ||
-           (window as any).REACT_APP_API_KEY;
-  } catch (e) {
-    return undefined;
-  }
-};
-
+// Acesso à API Key conforme diretrizes
 const getAI = () => {
-    const key = getApiKey();
-    // Verifica se a chave é uma string válida e não vazia
-    if (!key || typeof key !== 'string' || key.trim() === '') {
-        console.warn("API Key não encontrada ou vazia.");
-        return null;
+    if (typeof process !== 'undefined' && process.env.API_KEY) {
+        return new GoogleGenAI({ apiKey: process.env.API_KEY });
     }
-    return new GoogleGenAI({ apiKey: key });
-};
-
-// Função auxiliar robusta para extrair JSON vindo de LLMs
-const cleanJsonResponse = (text: string) => {
-  // Tenta encontrar um bloco de código JSON explícito
-  const matchJson = text.match(/```json\s*([\s\S]*?)\s*```/);
-  if (matchJson) return matchJson[1].trim();
-
-  // Tenta encontrar qualquer bloco de código
-  const matchCode = text.match(/```\s*([\s\S]*?)\s*```/);
-  if (matchCode) return matchCode[1].trim();
-
-  // Se não encontrar blocos, limpa espaços e tenta usar o texto puro
-  return text.trim();
+    return null;
 };
 
 export const fetchChapterContent = async (bookName: string, chapterNumber: number, retryCount = 0): Promise<{ verses: Verse[], summary: string }> => {
@@ -49,17 +20,28 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
       contents: `Livro: ${bookName}, Capítulo: ${chapterNumber}.
       
       Tarefa: Forneça o texto bíblico completo em Português (versão Almeida).
-      Retorne APENAS um JSON válido com a seguinte estrutura, sem formatação markdown extra fora do JSON:
-      
-      {
-        "verses": [
-          {"number": 1, "text": "Texto do versículo 1..."},
-          {"number": 2, "text": "Texto do versículo 2..."}
-        ],
-        "summary": "Resumo teológico breve do capítulo."
-      }`,
+      Forneça também um resumo teológico breve do capítulo.`,
       config: {
         temperature: 0.1,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            verses: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  number: { type: Type.INTEGER },
+                  text: { type: Type.STRING }
+                },
+                required: ["number", "text"]
+              }
+            },
+            summary: { type: Type.STRING }
+          },
+          required: ["verses", "summary"]
+        },
         safetySettings: [
           { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
           { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
@@ -71,8 +53,7 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
 
     if (response.text) {
       try {
-        const cleanedText = cleanJsonResponse(response.text);
-        const data = JSON.parse(cleanedText);
+        const data = JSON.parse(response.text);
         
         if (!data.verses || !Array.isArray(data.verses) || data.verses.length === 0) {
             throw new Error("Estrutura de versículos inválida ou vazia.");
