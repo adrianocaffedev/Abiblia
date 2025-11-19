@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { Verse } from '../types';
 
 const apiKey = process.env.API_KEY || '';
@@ -164,7 +164,7 @@ export const getVerseAudio = async (text: string, voiceName: string = 'Puck'): P
         parts: [{ text: text }],
         },
         config: {
-        responseModalities: ["AUDIO"], 
+        responseModalities: [Modality.AUDIO], 
         speechConfig: {
             voiceConfig: {
             prebuiltVoiceConfig: { voiceName: voiceName },
