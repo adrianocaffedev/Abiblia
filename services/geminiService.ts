@@ -2,10 +2,14 @@
 import { GoogleGenAI, Type, Modality, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { Verse } from '../types';
 
-// Acesso direto simplificado para permitir que o bundler do Vercel faça a substituição da string
+// Acesso robusto para suportar diferentes ferramentas de build (Vite, CRA, Vercel)
 const getApiKey = () => {
   try {
-    return process.env.API_KEY;
+    // Tenta encontrar a chave em diferentes padrões comuns de variáveis de ambiente
+    return process.env.API_KEY || 
+           process.env.REACT_APP_API_KEY || 
+           process.env.VITE_API_KEY ||
+           (window as any).REACT_APP_API_KEY;
   } catch (e) {
     return undefined;
   }

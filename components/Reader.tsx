@@ -269,18 +269,16 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
           
           {isApiKeyError ? (
             <div className="text-left space-y-3 text-sm text-stone-600 mb-6">
-                <p className="font-medium text-red-600 text-center">Chave de API não configurada.</p>
-                <p>Para que o app funcione no Vercel, você precisa configurar a variável de ambiente:</p>
-                <ol className="list-decimal list-inside space-y-1 bg-stone-50 p-3 rounded">
-                    <li>Vá ao painel do seu projeto no <strong>Vercel</strong>.</li>
-                    <li>Clique em <strong>Settings</strong> {'>'} <strong>Environment Variables</strong>.</li>
-                    <li>Adicione uma nova chave:
-                        <ul className="list-disc list-inside ml-4 mt-1 font-mono text-xs">
-                            <li>Key: <strong>API_KEY</strong></li>
-                            <li>Value: <em>Sua chave do Google AI Studio</em></li>
-                        </ul>
+                <p className="font-medium text-red-600 text-center">Chave de API não detectada.</p>
+                <p>O Vercel pode estar bloqueando a variável por segurança. Tente o seguinte:</p>
+                <ol className="list-decimal list-inside space-y-2 bg-stone-50 p-3 rounded">
+                    <li>Vá ao painel do <strong>Vercel</strong> {'>'} <strong>Environment Variables</strong>.</li>
+                    <li>
+                        Adicione uma <strong>nova chave</strong> com este nome exato:
+                        <code className="block mt-1 bg-stone-200 p-1 rounded text-xs font-mono font-bold text-stone-800">REACT_APP_API_KEY</code>
                     </li>
-                    <li>Redeploy (reimplante) o projeto para aplicar.</li>
+                    <li>Cole sua chave do Google AI Studio no valor.</li>
+                    <li><strong>Importante:</strong> Faça um novo Redeploy (Deployments {'>'} Redeploy) para aplicar.</li>
                 </ol>
             </div>
           ) : (
