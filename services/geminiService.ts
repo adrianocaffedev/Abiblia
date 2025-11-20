@@ -138,8 +138,15 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
   } catch (error: any) {
     console.error(`Erro detalhado ao buscar capítulo (Tentativa ${retryCount + 1}):`, error);
     
-    if (retryCount < 3 && (error.message?.includes('500') || error.message?.includes('503') || error.message?.includes('Internal'))) {
-        const delay = (retryCount + 1) * 1500;
+    const isRateLimit = error.message?.includes('429') || error.message?.includes('Resource has been exhausted');
+    const isServerIssue = error.message?.includes('500') || error.message?.includes('503') || error.message?.includes('Internal');
+
+    if (retryCount < 3 && (isRateLimit || isServerIssue)) {
+        // Se for Rate Limit (429), espera mais tempo (exponencial agressivo)
+        const baseDelay = isRateLimit ? 3000 : 1500;
+        const delay = (retryCount + 1) * baseDelay;
+        
+        console.log(`Aguardando ${delay}ms antes de tentar novamente...`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return fetchChapterContent(bookName, chapterNumber, retryCount + 1);
     }
@@ -223,13 +230,17 @@ export const getVerseAudio = async (text: string, voiceName: string = 'Puck', re
         throw new Error("Áudio vazio retornado pela API.");
     }
     return base64Audio;
-  } catch (error) {
+  } catch (error: any) {
       console.error(`Erro TTS (Tentativa ${retryCount + 1}):`, error);
       
+      const isRateLimit = error.message?.includes('429') || error.message?.includes('Resource has been exhausted');
+      
       // Tenta novamente até 3 vezes em caso de erro
-      if (retryCount < 2) {
-          // Backoff exponencial simples: 1000ms, 2000ms
-          await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
+      if (retryCount < 3) {
+          // Se for rate limit, espera 4 segundos progressivos, senão 1 segundo
+          const delay = isRateLimit ? (retryCount + 1) * 4000 : (retryCount + 1) * 1000;
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
           return getVerseAudio(text, voiceName, retryCount + 1);
       }
       
