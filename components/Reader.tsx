@@ -184,7 +184,9 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
         return;
     }
 
-    if (startIndex === 0) {
+    // Inicializa o estado de reprodução se ainda não estiver tocando
+    // Isso permite começar do meio do capítulo (playFromVerse)
+    if (!isPlayingRef.current) {
         setIsPlaying(true);
         isPlayingRef.current = true;
         initAudioContext();
@@ -227,26 +229,14 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     }
   };
 
-  const playSpecificVerse = async (verse: Verse, index: number) => {
+  const playFromVerse = (verse: Verse, index: number) => {
       if (activeVerseNum === verse.number && isPlaying) {
           stopAudio();
           return;
       }
       stopAudio();
-      initAudioContext();
-      
-      setIsPlaying(true);
-      isPlayingRef.current = true;
-      setLoadingAudio(true);
-      setActiveVerseNum(verse.number);
-
-      try {
-          const buffer = await fetchAndDecodeAudio(verse.text, index);
-          setLoadingAudio(false);
-          playAudioBuffer(buffer, verse.number);
-      } catch (e) {
-          stopAudio();
-      }
+      // Inicia a leitura do capítulo a partir deste versículo
+      playChapter(index);
   };
 
   if (state.isLoading) {
@@ -354,7 +344,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                     ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
                     : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
                 }`}
-                title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo"}
+                title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo Completo"}
             >
                 {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
                 <span className="hidden md:inline font-medium">{isPlaying ? "Parar" : "Ouvir"}</span>
@@ -423,11 +413,11 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                         {verse.text}
 
                         <button
-                            onClick={() => playSpecificVerse(verse, index)}
+                            onClick={() => playFromVerse(verse, index)}
                             className={`absolute -left-8 top-1.5 p-1.5 rounded-full transition-opacity ${
                                 activeVerseNum === verse.number ? 'opacity-100 text-bible-leather' : 'opacity-0 group-hover:opacity-100 text-stone-400 hover:text-bible-gold'
                             } hidden md:inline-flex`}
-                            title="Ouvir este versículo"
+                            title="Ouvir a partir daqui"
                         >
                             {activeVerseNum === verse.number ? (
                                 loadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4 animate-pulse" />
