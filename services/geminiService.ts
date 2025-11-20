@@ -42,7 +42,27 @@ const getAI = () => {
     return null;
 };
 
+const CACHE_PREFIX = 'bible_content_v1_';
+
 export const fetchChapterContent = async (bookName: string, chapterNumber: number, retryCount = 0): Promise<{ verses: Verse[], summary: string }> => {
+  // 1. Tenta buscar do Cache Local Primeiro
+  const cacheKey = `${CACHE_PREFIX}${bookName}_${chapterNumber}`;
+  try {
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        // Validação simples para garantir que o cache não está corrompido
+        if (parsed && Array.isArray(parsed.verses) && parsed.verses.length > 0) {
+            console.log(`Carregado do cache: ${bookName} ${chapterNumber}`);
+            return parsed;
+        }
+    }
+  } catch (e) {
+    console.warn("Erro ao ler cache", e);
+    localStorage.removeItem(cacheKey);
+  }
+
+  // 2. Se não tem no cache, chama a AI
   const ai = getAI();
   if (!ai) throw new Error("MISSING_API_KEY");
 
@@ -91,6 +111,13 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
             throw new Error("Estrutura de versículos inválida ou vazia.");
         }
         
+        // Salva no Cache para a próxima vez
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+        } catch (cacheError) {
+            console.warn("Não foi possível salvar no cache (provavelmente quota excedida).");
+        }
+
         return data;
       } catch (parseError) {
         console.error("Erro ao fazer parse do JSON:", parseError);

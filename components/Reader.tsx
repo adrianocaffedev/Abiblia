@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { BibleState, Verse } from '../types';
 import { AVAILABLE_VOICES } from '../constants';
-import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Square, Volume2, Mic2, ChevronDown, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Pause, Volume2, Mic2, ChevronDown, AlertTriangle, X, PlayCircle } from 'lucide-react';
 import { getVerseAudio } from '../services/geminiService';
 
 interface ReaderProps {
@@ -36,16 +36,19 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
   
   // Audio State
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [activeVerseNum, setActiveVerseNum] = useState<number | null>(null);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(AVAILABLE_VOICES[0]);
   const [showVoiceMenu, setShowVoiceMenu] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   
   // Audio Context Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<AudioBufferSourceNode | null>(null);
   const isPlayingRef = useRef(false); 
   const versesRef = useRef<Verse[]>([]);
+  const currentVerseIndexRef = useRef<number>(0);
   
   // Smart Audio Queue / Cache
   const audioCacheRef = useRef<Map<number, Promise<AudioBuffer>>>(new Map());
@@ -56,6 +59,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     }
     stopAudio();
     audioCacheRef.current.clear();
+    setAudioError(null);
   }, [state.currentBook, state.currentChapter]);
 
   useEffect(() => {
@@ -76,9 +80,12 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
   const handleVoiceChange = (voice: typeof AVAILABLE_VOICES[0]) => {
       setSelectedVoice(voice);
       setShowVoiceMenu(false);
+      // Reinicia áudio se estiver tocando para aplicar nova voz
       if (isPlaying) {
           stopAudio();
           audioCacheRef.current.clear();
+          // Pequeno delay para permitir o stop limpar o estado
+          setTimeout(() => playChapter(currentVerseIndexRef.current), 100);
       } else {
           audioCacheRef.current.clear();
       }
@@ -102,8 +109,24 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     }
     isPlayingRef.current = false;
     setIsPlaying(false);
+    setIsPaused(false);
     setActiveVerseNum(null);
     setLoadingAudio(false);
+  };
+
+  const pauseAudio = () => {
+      if (sourceRef.current) {
+          try { sourceRef.current.stop(); } catch(e) {}
+          sourceRef.current = null;
+      }
+      // Não resetamos isPlayingRef totalmente, apenas o estado visual e o node
+      setIsPaused(true);
+      isPlayingRef.current = false; // Para o loop de playChapter
+  };
+
+  const resumeAudio = () => {
+      setIsPaused(false);
+      playChapter(currentVerseIndexRef.current);
   };
 
   const fetchAndDecodeAudio = (text: string, index: number): Promise<AudioBuffer> => {
@@ -143,9 +166,11 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
       
       source.onended = () => {
           sourceRef.current = null;
-          if (onComplete && isPlayingRef.current) {
+          // Se o usuário pausou durante a reprodução, não prosseguir
+          if (onComplete && isPlayingRef.current && !isPaused) {
               onComplete();
-          } else if (!onComplete) {
+          } else if (!onComplete && !isPaused) {
+              // Fim natural
               setIsPlaying(false);
               setActiveVerseNum(null);
               isPlayingRef.current = false;
@@ -154,9 +179,19 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
       sourceRef.current = source;
       
+      // Scroll logic - suave e centralizado
       const element = document.getElementById(`verse-${verseNumber}`);
       if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Verifica se o elemento já está visível para evitar scroll desnecessário
+          const rect = element.getBoundingClientRect();
+          const isVisible = (
+            rect.top >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
+          );
+          
+          if (!isVisible) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
       }
 
       source.start(0);
@@ -179,13 +214,17 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
   const playChapter = useCallback(async (startIndex = 0) => {
     const verses = versesRef.current;
+    
+    // Limite de segurança
     if (!verses || startIndex >= verses.length) {
         stopAudio();
         return;
     }
 
+    currentVerseIndexRef.current = startIndex;
+    setAudioError(null);
+
     // Inicializa o estado de reprodução se ainda não estiver tocando
-    // Isso permite começar do meio do capítulo (playFromVerse)
     if (!isPlayingRef.current) {
         setIsPlaying(true);
         isPlayingRef.current = true;
@@ -202,7 +241,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
         prefetchUpcoming(startIndex);
         const audioBuffer = await fetchAndDecodeAudio(currentVerse.text, startIndex);
 
-        if (!isPlayingRef.current) return;
+        if (!isPlayingRef.current) return; // Usuário parou enquanto carregava
         setLoadingAudio(false);
 
         playAudioBuffer(audioBuffer, currentVerse.number, () => {
@@ -211,39 +250,39 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Erro no fluxo de leitura:", error);
-        if (isPlayingRef.current) {
-             setTimeout(() => playChapter(startIndex + 1), 1000);
-        } else {
-            stopAudio();
-        }
+        setLoadingAudio(false);
+        stopAudio();
+        setAudioError("Não foi possível gerar o áudio. Verifique sua conexão ou chave API.");
     }
   }, [selectedVoice]);
 
-  const togglePlayChapter = () => {
-    if (isPlaying) {
-        stopAudio();
-    } else {
-        playChapter(0);
-    }
-  };
-
   const playFromVerse = (verse: Verse, index: number) => {
       if (activeVerseNum === verse.number && isPlaying) {
-          stopAudio();
+          if (isPaused) resumeAudio();
+          else pauseAudio();
           return;
       }
       stopAudio();
-      // Inicia a leitura do capítulo a partir deste versículo
-      playChapter(index);
+      // Pequeno timeout para garantir limpeza
+      setTimeout(() => playChapter(index), 50);
+  };
+
+  const toggleWholeChapter = () => {
+      if (isPlaying) {
+          if (isPaused) resumeAudio();
+          else pauseAudio();
+      } else {
+          playChapter(0);
+      }
   };
 
   if (state.isLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-bible-paper">
         <Loader2 className="w-12 h-12 text-bible-gold animate-spin mb-4" />
-        <p className="text-stone-500 animate-pulse font-serif text-center px-4">Buscando as escrituras sagradas...</p>
+        <p className="text-stone-500 animate-pulse font-serif text-center px-4">Carregando texto bíblico...</p>
       </div>
     );
   }
@@ -260,14 +299,14 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
           {isApiKeyError ? (
             <div className="text-left space-y-3 text-sm text-stone-600 mb-6">
                 <p className="font-medium text-red-600 text-center">Chave de API não detectada.</p>
-                <p>O sistema de build (provavelmente Vite) ignorou a chave `REACT_APP_`. Faça isso:</p>
+                <p>O sistema de build (Vite) pode ter ignorado a chave antiga. Tente:</p>
                 <ol className="list-decimal list-inside space-y-2 bg-stone-50 p-3 rounded">
                     <li>Vá ao painel do <strong>Vercel</strong> {'>'} <strong>Environment Variables</strong>.</li>
                     <li>
-                        Adicione uma <strong>NOVA</strong> variável chamada:
-                        <code className="block mt-1 bg-stone-200 p-1 rounded text-xs font-mono font-bold text-stone-800">VITE_API_KEY</code>
+                        Crie uma variável chamada:
+                        <code className="ml-1 bg-stone-200 p-0.5 rounded text-xs font-mono font-bold text-stone-800">VITE_API_KEY</code>
                     </li>
-                    <li>Cole sua chave do Google AI Studio.</li>
+                    <li>Cole sua chave do Google AI Studio nela.</li>
                     <li>Faça um <strong>Redeploy</strong>.</li>
                 </ol>
             </div>
@@ -336,21 +375,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
                 )}
             </div>
 
-            {/* Audio Control - Compact on Mobile */}
-            <button 
-                onClick={togglePlayChapter}
-                className={`flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm rounded-full transition-all border ${
-                    isPlaying && !activeVerseNum 
-                    ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100' 
-                    : 'bg-stone-100 text-stone-600 border-stone-200 hover:bg-stone-200'
-                }`}
-                title={isPlaying ? "Parar Leitura" : "Ouvir Capítulo Completo"}
-            >
-                {isPlaying ? <Square className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current" />}
-                <span className="hidden md:inline font-medium">{isPlaying ? "Parar" : "Ouvir"}</span>
-            </button>
-
-            {/* AI Button - Compact on Mobile */}
+            {/* AI Button */}
             <button 
                 onClick={onToggleAI}
                 className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200"
@@ -362,25 +387,48 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
       </div>
 
       {/* Content Scroll Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-12 max-w-4xl mx-auto w-full pb-32">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-12 max-w-4xl mx-auto w-full pb-20 scroll-smooth">
         
-        {/* Mobile Voice Selector */}
-        <div className="md:hidden mb-6">
-            <label className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2 block">Voz da Narração</label>
-            <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                {AVAILABLE_VOICES.map(voice => (
-                    <button
-                        key={voice.id}
-                        onClick={() => handleVoiceChange(voice)}
-                        className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs border transition-all ${
-                            selectedVoice.id === voice.id
-                            ? 'bg-bible-leather text-white border-bible-leather shadow-md'
-                            : 'bg-white text-stone-600 border-stone-200'
-                        }`}
-                    >
-                        {voice.name}
-                    </button>
-                ))}
+        {/* Top Actions: Play Chapter Button */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
+            <button
+                onClick={toggleWholeChapter}
+                className={`w-full md:w-auto flex items-center justify-center gap-3 px-6 py-3 rounded-full font-medium transition-all transform active:scale-95 shadow-sm ${
+                    isPlaying 
+                    ? 'bg-stone-100 text-stone-800 border border-stone-200 hover:bg-stone-200' 
+                    : 'bg-bible-leather text-white hover:bg-stone-800 hover:shadow-lg'
+                }`}
+            >
+                {isPlaying && !isPaused ? (
+                    <>
+                        {loadingAudio ? <Loader2 className="w-5 h-5 animate-spin" /> : <Pause className="w-5 h-5" />}
+                        <span>Pausar Leitura</span>
+                    </>
+                ) : (
+                    <>
+                        {isPlaying && isPaused ? <Play className="w-5 h-5" /> : <PlayCircle className="w-5 h-5" />}
+                        <span>{isPlaying && isPaused ? "Continuar Leitura" : "Ouvir Capítulo"}</span>
+                    </>
+                )}
+            </button>
+
+            {/* Mobile Voice Selector */}
+            <div className="md:hidden w-full">
+                <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                    {AVAILABLE_VOICES.map(voice => (
+                        <button
+                            key={voice.id}
+                            onClick={() => handleVoiceChange(voice)}
+                            className={`flex-shrink-0 px-3 py-2 rounded-lg text-xs border transition-all ${
+                                selectedVoice.id === voice.id
+                                ? 'bg-bible-leather text-white border-bible-leather shadow-md'
+                                : 'bg-white text-stone-600 border-stone-200'
+                            }`}
+                        >
+                            {voice.name}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
 
@@ -393,38 +441,47 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
         )}
 
         {/* Verses */}
-        <div className="space-y-1">
+        <div className="space-y-2">
             {state.content.verses.map((verse, index) => (
                 <div 
                     id={`verse-${verse.number}`}
                     key={verse.number} 
-                    className={`relative group rounded-lg transition-all duration-500 ${
+                    className={`relative group rounded-lg transition-all duration-500 border ${
                         activeVerseNum === verse.number 
-                        ? 'bg-bible-gold/15 py-4 px-3 -mx-3 md:px-4 md:-mx-4 shadow-sm ring-1 ring-bible-gold/20' 
-                        : 'hover:bg-stone-50 py-1'
+                        ? 'bg-bible-gold/10 border-bible-gold/30 py-4 px-3 -mx-3 md:px-4 md:-mx-4 shadow-md' 
+                        : 'bg-transparent border-transparent hover:bg-stone-50 py-1'
                     }`}
                 >
-                    <p className="text-lg md:text-xl leading-loose font-serif text-bible-ink relative text-justify md:text-left">
+                    <p className="text-lg md:text-xl leading-loose font-serif text-bible-ink relative text-justify md:text-left pl-8 md:pl-0">
+                        {/* Play Button: Visible on Mobile (inline-flex), Absolute on Desktop */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                playFromVerse(verse, index);
+                            }}
+                            className={`
+                                absolute left-0 top-2 md:-left-10 md:top-1.5
+                                inline-flex items-center justify-center p-1.5 rounded-full transition-all z-10
+                                ${activeVerseNum === verse.number 
+                                    ? 'text-bible-leather bg-white shadow-sm opacity-100' 
+                                    : 'text-stone-400 hover:text-bible-gold md:opacity-0 md:group-hover:opacity-100 bg-stone-50 md:bg-transparent'
+                                }
+                            `}
+                            title="Ouvir a partir deste versículo"
+                        >
+                            {activeVerseNum === verse.number && !isPaused ? (
+                                loadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Pause className="w-4 h-4" />
+                            ) : (
+                                <Play className="w-4 h-4 ml-0.5" />
+                            )}
+                        </button>
+
                         <sup className={`text-xs font-bold mr-2 select-none font-sans transition-colors ${
                             activeVerseNum === verse.number ? 'text-bible-leather' : 'text-bible-gold'
                         }`}>
                             {verse.number}
                         </sup>
                         {verse.text}
-
-                        <button
-                            onClick={() => playFromVerse(verse, index)}
-                            className={`absolute -left-8 top-1.5 p-1.5 rounded-full transition-opacity ${
-                                activeVerseNum === verse.number ? 'opacity-100 text-bible-leather' : 'opacity-0 group-hover:opacity-100 text-stone-400 hover:text-bible-gold'
-                            } hidden md:inline-flex`}
-                            title="Ouvir a partir daqui"
-                        >
-                            {activeVerseNum === verse.number ? (
-                                loadingAudio ? <Loader2 className="w-4 h-4 animate-spin" /> : <Volume2 className="w-4 h-4 animate-pulse" />
-                            ) : (
-                                <Play className="w-3 h-3" />
-                            )}
-                        </button>
                     </p>
                 </div>
             ))}
@@ -455,6 +512,20 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             </button>
         </div>
       </div>
+
+      {/* Error Toast */}
+      {audioError && (
+          <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg shadow-lg z-50 animate-fadeIn flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm">
+                <p className="font-bold mb-1">Erro de Áudio</p>
+                <p>{audioError}</p>
+            </div>
+            <button onClick={() => setAudioError(null)} className="text-red-400 hover:text-red-700">
+                <X className="w-4 h-4" />
+            </button>
+          </div>
+      )}
     </div>
   );
 };
