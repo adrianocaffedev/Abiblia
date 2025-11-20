@@ -5,7 +5,6 @@ import { Verse } from '../types';
 // Função robusta para encontrar a API Key em diferentes ambientes
 const getApiKey = (): string | undefined => {
   // 1. Padrão VITE (Mais comum atualmente em deploys modernos/Vercel)
-  // O Vite só expõe variáveis que começam com VITE_ por padrão
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -19,7 +18,6 @@ const getApiKey = (): string | undefined => {
   }
 
   // 2. Padrão Create React App / Webpack (process.env)
-  // Tenta ler diretamente para garantir que o bundler faça a substituição da string
   try {
     if (typeof process !== 'undefined' && process.env) {
       if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
@@ -201,31 +199,40 @@ export const generateBibleCover = async (prompt: string): Promise<string> => {
   }
 };
 
-export const getVerseAudio = async (text: string, voiceName: string = 'Puck'): Promise<string> => {
+export const getVerseAudio = async (text: string, voiceName: string = 'Puck', retryCount = 0): Promise<string> => {
   const ai = getAI();
   if (!ai) throw new Error("API Key missing");
 
   try {
+    // Estrutura exata conforme documentação para evitar erros de payload
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
-        contents: {
-        parts: [{ text: text }],
-        },
+        contents: [{ parts: [{ text: text }] }],
         config: {
-        responseModalities: [Modality.AUDIO], 
-        speechConfig: {
-            voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: voiceName },
-            },
-        },
+          responseModalities: [Modality.AUDIO], 
+          speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: voiceName },
+              },
+          },
         },
     });
 
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) throw new Error("Não foi possível gerar o áudio.");
+    if (!base64Audio) {
+        throw new Error("Áudio vazio retornado pela API.");
+    }
     return base64Audio;
   } catch (error) {
-      console.error("Erro TTS:", error);
+      console.error(`Erro TTS (Tentativa ${retryCount + 1}):`, error);
+      
+      // Tenta novamente até 3 vezes em caso de erro
+      if (retryCount < 2) {
+          // Backoff exponencial simples: 1000ms, 2000ms
+          await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1000));
+          return getVerseAudio(text, voiceName, retryCount + 1);
+      }
+      
       throw error;
   }
 }

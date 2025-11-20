@@ -199,7 +199,8 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
 
   const prefetchUpcoming = (currentIndex: number) => {
       const verses = versesRef.current;
-      const LOOKAHEAD = 3;
+      // Reduzido de 3 para 1 para evitar erro de "Too Many Requests" e sobrecarga
+      const LOOKAHEAD = 1;
       
       for (let i = 1; i <= LOOKAHEAD; i++) {
           const nextIndex = currentIndex + i;
@@ -253,8 +254,12 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     } catch (error: any) {
         console.error("Erro no fluxo de leitura:", error);
         setLoadingAudio(false);
-        stopAudio();
-        setAudioError("Não foi possível gerar o áudio. Verifique sua conexão ou chave API.");
+        
+        // Se falhar, mas não foi o usuário que parou, tenta mostrar o erro
+        if (isPlayingRef.current) {
+            stopAudio();
+            setAudioError("Erro ao gerar áudio. Tente novamente em instantes.");
+        }
     }
   }, [selectedVoice]);
 
