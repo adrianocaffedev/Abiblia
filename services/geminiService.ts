@@ -2,31 +2,32 @@
 import { GoogleGenAI, Modality, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 import { Verse } from '../types';
 
-// Função robusta para encontrar a API Key em diferentes ambientes (Vercel, Vite, CRA)
+// Função robusta para encontrar a API Key em diferentes ambientes
 const getApiKey = (): string | undefined => {
-  // 1. Tenta ler do process.env com prefixo REACT_APP_ (Padrão Create React App / Vercel)
-  if (typeof process !== 'undefined' && process.env.REACT_APP_API_KEY) {
-    return process.env.REACT_APP_API_KEY;
-  }
-  
-  // 2. Tenta ler do import.meta.env (Padrão Vite)
+  // 1. Padrão VITE (Mais comum atualmente em deploys modernos/Vercel)
+  // O Vite só expõe variáveis que começam com VITE_ por padrão
   try {
-    // @ts-ignore - Evita erros de lint/ts se a configuração não for ESNext
+    // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
-      // @ts-ignore
-      if (import.meta.env.REACT_APP_API_KEY) return import.meta.env.REACT_APP_API_KEY;
-      // @ts-ignore
-      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
-      // @ts-ignore
-      if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
+       // @ts-ignore
+       if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
+       // @ts-ignore
+       if (import.meta.env.REACT_APP_API_KEY) return import.meta.env.REACT_APP_API_KEY;
     }
   } catch (e) {
-    // Falha silenciosa se import.meta não for suportado
+    // Ignora erros se import.meta não existir
   }
 
-  // 3. Fallback para process.env.API_KEY (Node/Serverless ou configs manuais)
-  if (typeof process !== 'undefined' && process.env.API_KEY) {
-    return process.env.API_KEY;
+  // 2. Padrão Create React App / Webpack (process.env)
+  // Tenta ler diretamente para garantir que o bundler faça a substituição da string
+  try {
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
+      if (process.env.VITE_API_KEY) return process.env.VITE_API_KEY;
+      if (process.env.API_KEY) return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignora erros de acesso ao process
   }
 
   return undefined;

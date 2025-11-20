@@ -270,15 +270,15 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
           {isApiKeyError ? (
             <div className="text-left space-y-3 text-sm text-stone-600 mb-6">
                 <p className="font-medium text-red-600 text-center">Chave de API não detectada.</p>
-                <p>O Vercel pode estar bloqueando a variável por segurança. Tente o seguinte:</p>
+                <p>O sistema de build (provavelmente Vite) ignorou a chave `REACT_APP_`. Faça isso:</p>
                 <ol className="list-decimal list-inside space-y-2 bg-stone-50 p-3 rounded">
                     <li>Vá ao painel do <strong>Vercel</strong> {'>'} <strong>Environment Variables</strong>.</li>
                     <li>
-                        Adicione uma <strong>nova chave</strong> com este nome exato:
-                        <code className="block mt-1 bg-stone-200 p-1 rounded text-xs font-mono font-bold text-stone-800">REACT_APP_API_KEY</code>
+                        Adicione uma <strong>NOVA</strong> variável chamada:
+                        <code className="block mt-1 bg-stone-200 p-1 rounded text-xs font-mono font-bold text-stone-800">VITE_API_KEY</code>
                     </li>
-                    <li>Cole sua chave do Google AI Studio no valor.</li>
-                    <li><strong>Importante:</strong> Faça um novo Redeploy (Deployments {'>'} Redeploy) para aplicar.</li>
+                    <li>Cole sua chave do Google AI Studio.</li>
+                    <li>Faça um <strong>Redeploy</strong>.</li>
                 </ol>
             </div>
           ) : (
