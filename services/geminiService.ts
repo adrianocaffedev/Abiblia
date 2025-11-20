@@ -2,10 +2,41 @@
 import { GoogleGenAI, Modality, HarmCategory, HarmBlockThreshold, Type } from "@google/genai";
 import { Verse } from '../types';
 
-// Acesso à API Key conforme diretrizes
+// Função robusta para encontrar a API Key em diferentes ambientes (Vercel, Vite, CRA)
+const getApiKey = (): string | undefined => {
+  // 1. Tenta ler do process.env com prefixo REACT_APP_ (Padrão Create React App / Vercel)
+  if (typeof process !== 'undefined' && process.env.REACT_APP_API_KEY) {
+    return process.env.REACT_APP_API_KEY;
+  }
+  
+  // 2. Tenta ler do import.meta.env (Padrão Vite)
+  try {
+    // @ts-ignore - Evita erros de lint/ts se a configuração não for ESNext
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (import.meta.env.REACT_APP_API_KEY) return import.meta.env.REACT_APP_API_KEY;
+      // @ts-ignore
+      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
+      // @ts-ignore
+      if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
+    }
+  } catch (e) {
+    // Falha silenciosa se import.meta não for suportado
+  }
+
+  // 3. Fallback para process.env.API_KEY (Node/Serverless ou configs manuais)
+  if (typeof process !== 'undefined' && process.env.API_KEY) {
+    return process.env.API_KEY;
+  }
+
+  return undefined;
+};
+
+// Acesso à API Key
 const getAI = () => {
-    if (typeof process !== 'undefined' && process.env.API_KEY) {
-        return new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const key = getApiKey();
+    if (key) {
+        return new GoogleGenAI({ apiKey: key });
     }
     return null;
 };
@@ -96,7 +127,7 @@ export const fetchChapterContent = async (bookName: string, chapterNumber: numbe
 
 export const askBibleAssistant = async (query: string, context: string): Promise<string> => {
   const ai = getAI();
-  if (!ai) return "Por favor, configure sua API Key para usar o assistente.";
+  if (!ai) return "Por favor, configure sua API Key para usar o assistente. (Erro: Chave não detectada)";
 
   try {
     const response = await ai.models.generateContent({
