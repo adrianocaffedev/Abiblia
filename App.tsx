@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Book, BibleState } from './types';
 import { BIBLE_BOOKS } from './constants';
@@ -5,6 +6,7 @@ import { Sidebar } from './components/Sidebar';
 import { Reader } from './components/Reader';
 import { AiSidebar } from './components/AiSidebar';
 import { SettingsModal } from './components/SettingsModal';
+import { NotesPanel } from './components/NotesPanel';
 import { Cover } from './components/Cover';
 import { fetchChapterContent } from './services/geminiService';
 import { Menu } from 'lucide-react';
@@ -13,6 +15,7 @@ const App: React.FC = () => {
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showCover, setShowCover] = useState(true);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
   
   const [state, setState] = useState<BibleState>({
     currentBook: BIBLE_BOOKS[0], // Genesis
@@ -153,6 +156,7 @@ const App: React.FC = () => {
             state={state} 
             onChapterChange={handleNavigation}
             onToggleAI={() => setState(prev => ({...prev, isAiPanelOpen: !prev.isAiPanelOpen}))}
+            onToggleNotes={() => setIsNotesOpen(!isNotesOpen)}
         />
       </main>
 
@@ -161,6 +165,14 @@ const App: React.FC = () => {
         isOpen={state.isAiPanelOpen} 
         onClose={() => setState(prev => ({...prev, isAiPanelOpen: false}))}
         context={state.content ? `${state.currentBook.name} Capítulo ${state.currentChapter}: ${state.content.summary}` : 'Bíblia Sagrada'}
+      />
+
+      {/* Notes Panel */}
+      <NotesPanel 
+        isOpen={isNotesOpen}
+        onClose={() => setIsNotesOpen(false)}
+        currentBookName={state.currentBook.name}
+        currentChapter={state.currentChapter}
       />
 
       {/* Settings Modal */}
@@ -174,10 +186,13 @@ const App: React.FC = () => {
       )}
       
       {/* Overlay for mobile sidebar */}
-      {(state.isSidebarOpen || state.isAiPanelOpen) && (
+      {(state.isSidebarOpen || state.isAiPanelOpen || isNotesOpen) && (
         <div 
             className="fixed inset-0 bg-black/30 z-40 lg:hidden"
-            onClick={() => setState(prev => ({...prev, isSidebarOpen: false, isAiPanelOpen: false}))}
+            onClick={() => {
+                setState(prev => ({...prev, isSidebarOpen: false, isAiPanelOpen: false}));
+                setIsNotesOpen(false);
+            }}
         />
       )}
     </div>

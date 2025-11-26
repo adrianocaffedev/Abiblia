@@ -2,13 +2,14 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { BibleState, Verse } from '../types';
 import { AVAILABLE_VOICES } from '../constants';
-import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Pause, Volume2, Mic2, ChevronDown, AlertTriangle, X, PlayCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, MessageCircleQuestion, Play, Pause, Volume2, Mic2, ChevronDown, AlertTriangle, X, PlayCircle, NotebookPen } from 'lucide-react';
 import { getVerseAudio } from '../services/geminiService';
 
 interface ReaderProps {
   state: BibleState;
   onChapterChange: (delta: number) => void;
   onToggleAI: () => void;
+  onToggleNotes: () => void;
 }
 
 // Helper para decodificar PCM (Raw Audio) do Gemini
@@ -31,7 +32,7 @@ async function decodePCM(
   return buffer;
 }
 
-export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggleAI }) => {
+export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggleAI, onToggleNotes }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   
   // Audio State
@@ -287,7 +288,7 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
     return (
       <div className="flex-1 flex flex-col items-center justify-center h-full bg-bible-paper">
         <Loader2 className="w-12 h-12 text-bible-gold animate-spin mb-4" />
-        <p className="text-stone-500 animate-pulse font-serif text-center px-4">Carregando texto bíblico...</p>
+        <p className="text-stone-500 animate-pulse font-serif text-center px-4">Carregando capítulo...</p>
       </div>
     );
   }
@@ -384,9 +385,20 @@ export const Reader: React.FC<ReaderProps> = ({ state, onChapterChange, onToggle
             <button 
                 onClick={onToggleAI}
                 className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-full hover:bg-indigo-100 transition-colors border border-indigo-200"
+                title="Assistente de Estudo"
             >
                 <MessageCircleQuestion className="w-4 h-4" />
                 <span className="hidden md:inline">AI</span>
+            </button>
+
+            {/* Notes Button */}
+            <button 
+                onClick={onToggleNotes}
+                className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-sm bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100 transition-colors border border-amber-200"
+                title="Minhas Anotações"
+            >
+                <NotebookPen className="w-4 h-4" />
+                <span className="hidden md:inline">Notas</span>
             </button>
          </div>
       </div>

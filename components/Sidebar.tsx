@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Book, Testament } from '../types';
 import { BIBLE_BOOKS } from '../constants';
-import { Search, BookOpen, ChevronDown, ChevronRight, X, Settings, Home } from 'lucide-react';
+import { Search, BookOpen, ChevronDown, ChevronRight, X, Home } from 'lucide-react';
 
 interface SidebarProps {
   currentBook: Book;
@@ -143,6 +143,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Home className="w-4 h-4" />
             <span>Fechar Livro (Ir para Capa)</span>
         </button>
+        {/* Configurações da capa ocultas conforme solicitação
         <button 
             onClick={onOpenSettings}
             className="flex items-center gap-2 text-stone-600 hover:text-bible-leather transition-colors text-sm font-medium w-full px-2 py-3 rounded hover:bg-stone-100"
@@ -150,6 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <Settings className="w-4 h-4" />
             <span>Configurações da Capa</span>
         </button>
+        */}
       </div>
     </div>
   );

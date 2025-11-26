@@ -39,3 +39,11 @@ export interface VoiceConfig {
     gender: 'Masculino' | 'Feminino';
     style: string;
 }
+
+export interface Note {
+  id: string;
+  bookName: string;
+  chapter: number;
+  text: string;
+  createdAt: number;
+}
